@@ -1,5 +1,5 @@
 """
-Predykcja opoznien lotow — Siec Neuronowa od ZERA (tylko NumPy)
+Predykcja opoznien lotow — Siec Neuronowa od ZERA 
 Dataset: Airlines Dataset to Predict a Delay
 Link:    https://www.kaggle.com/datasets/jimschacko/airlines-dataset-to-predict-a-delay
 Plik:    Airlines.csv
