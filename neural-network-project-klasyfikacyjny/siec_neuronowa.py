@@ -1,5 +1,5 @@
 """
-Predykcja opoznien lotow — Siec Neuronowa od ZERA 
+Predykcja opoznien lotow — Siec Neuronowa od ZERA (tylko NumPy)
 Dataset: Airlines Dataset to Predict a Delay
 Link:    https://www.kaggle.com/datasets/jimschacko/airlines-dataset-to-predict-a-delay
 Plik:    Airlines.csv
@@ -147,7 +147,7 @@ class SSN:
 
 
 # ================================================================
-# 3. ANALIZA 5 PARAMETROW
+# 3. ANALIZA  PARAMETROW
 # Kazdy parametr: 4 wartosci, kazda konfiguracja powtorzona 3 razy
 # Wyniki: srednia, std, min, max — osobno dla train i test
 # ================================================================
@@ -205,7 +205,6 @@ w4 = analizuj(
     "Liczba warstw", [1, 2, 3, 4], lambda n: SSN([N_FEATURES] + [8] * n + [1], lr=0.01)
 )
 
-# Parametr 5: wielkos i sposob doboru proby (podzial train/test)
 print("\nPARAMETR: Podzial danych (train/test)")
 w5 = []
 for ts in [0.4, 0.3, 0.2, 0.1]:
@@ -233,6 +232,125 @@ for ts in [0.4, 0.3, 0.2, 0.1]:
             "test_max": round(float(np.max(tel)), 4),
             "train_all": trl,
             "test_all": tel,
+        }
+    )
+
+
+print("\nPARAMETR: Liczba epok")
+w6 = []
+for epoki_test in [40, 80, 150, 200]:
+    trl, tel = [], []
+    for rep in range(N_REPEATS):
+        np.random.seed(rep * 17 + 3)
+        siec = SSN([N_FEATURES, 8, 1], lr=0.01)
+        siec.ucz(X_train, y_train, X_test, y_test, epoki=epoki_test)
+        trl.append(siec.acc(X_train, y_train))
+        tel.append(siec.acc(X_test, y_test))
+        print(f"  [epoki={epoki_test}|p{rep+1}] tr={trl[-1]:.4f} te={tel[-1]:.4f}")
+    w6.append(
+        {
+            "wartosc": str(epoki_test),
+            "train_mean": round(float(np.mean(trl)), 4),
+            "train_std": round(float(np.std(trl)), 4),
+            "train_min": round(float(np.min(trl)), 4),
+            "train_max": round(float(np.max(trl)), 4),
+            "test_mean": round(float(np.mean(tel)), 4),
+            "test_std": round(float(np.std(tel)), 4),
+            "test_min": round(float(np.min(tel)), 4),
+            "test_max": round(float(np.max(tel)), 4),
+        }
+    )
+
+print("\nPARAMETR: Rozmiar batcha")
+w7 = []
+for batch in [32, 64, 128, 256]:
+    trl, tel = [], []
+    for rep in range(N_REPEATS):
+        np.random.seed(rep * 17 + 3)
+        siec = SSN([N_FEATURES, 8, 1], lr=0.01)
+
+        def ucz_z_batch(ssn, Xtr, ytr, Xte, yte, epoki=EPOKI):
+            ssn.historia = []
+            for ep in range(epoki):
+                idx = np.random.permutation(len(Xtr))
+                Xs, ys = Xtr[idx], ytr[idx]
+                for s in range(0, len(Xtr), batch):
+                    ssn._przod(Xs[s : s + batch])
+                    ssn._wstecz(Xs[s : s + batch], ys[s : s + batch])
+                if (ep + 1) % 10 == 0:
+                    ssn.historia.append(
+                        (
+                            ((ssn._przod(Xtr).flatten() > 0.5) == ytr).mean(),
+                            ((ssn._przod(Xte).flatten() > 0.5) == yte).mean(),
+                        )
+                    )
+
+        ucz_z_batch(siec, X_train, y_train, X_test, y_test)
+        trl.append(siec.acc(X_train, y_train))
+        tel.append(siec.acc(X_test, y_test))
+        print(f"  [batch={batch}|p{rep+1}] tr={trl[-1]:.4f} te={tel[-1]:.4f}")
+    w7.append(
+        {
+            "wartosc": str(batch),
+            "train_mean": round(float(np.mean(trl)), 4),
+            "train_std": round(float(np.std(trl)), 4),
+            "train_min": round(float(np.min(trl)), 4),
+            "train_max": round(float(np.max(trl)), 4),
+            "test_mean": round(float(np.mean(tel)), 4),
+            "test_std": round(float(np.std(tel)), 4),
+            "test_min": round(float(np.min(tel)), 4),
+            "test_max": round(float(np.max(tel)), 4),
+        }
+    )
+
+print("\nPARAMETR: Momentum")
+
+
+class SSN_momentum(SSN):
+    def __init__(self, warstwy, momentum=0.0, **kwargs):
+        super().__init__(warstwy, **kwargs)
+        self.momentum = momentum
+        self.vW = [np.zeros_like(W) for W in self.W]
+        self.vb = [np.zeros_like(b) for b in self.b]
+
+    def _wstecz(self, X, y):
+        m = X.shape[0]
+        y = y.reshape(-1, 1)
+        d = self.as_[-1] - y
+        gW, gb = [], []
+        for i in reversed(range(len(self.W))):
+            gW.insert(0, self.as_[i].T @ d / m)
+            gb.insert(0, d.mean(0, keepdims=True))
+            if i > 0:
+                d = (d @ self.W[i].T) * self._df(self.zs[i - 1])
+        for i in range(len(self.W)):
+            self.vW[i] = self.momentum * self.vW[i] - self.lr * gW[i]
+            self.vb[i] = self.momentum * self.vb[i] - self.lr * gb[i]
+            self.W[i] += self.vW[i]
+            self.b[i] += self.vb[i]
+
+
+w8 = []
+for mom in [0.0, 0.5, 0.9, 0.95]:
+    trl, tel = [], []
+    for rep in range(N_REPEATS):
+        np.random.seed(rep * 17 + 3)
+        siec = SSN_momentum([N_FEATURES, 8, 1], momentum=mom, lr=0.01)
+        siec.ucz(X_train, y_train, X_test, y_test, epoki=EPOKI)
+        trl.append(siec.acc(X_train, y_train))
+        tel.append(siec.acc(X_test, y_test))
+        print(f"  [momentum={mom}|p{rep+1}] tr={trl[-1]:.4f} te={tel[-1]:.4f}")
+    w8.append(
+        {
+            "wartosc": str(mom),
+            "train_mean": round(float(np.mean(trl)), 4),
+            "train_std": round(float(np.std(trl)), 4),
+            "train_min": round(float(np.min(trl)), 4),
+            "train_max": round(float(np.max(trl)), 4),
+            "test_mean": round(float(np.mean(tel)), 4),
+            "test_std": round(float(np.std(tel)), 4),
+            "test_min": round(float(np.min(tel)), 4),
+            "test_max": round(float(np.max(tel)), 4),
         }
     )
 
@@ -305,7 +423,9 @@ wykres(w2, "Liczba neuronow", "p2_neurony.png")
 wykres(w3, "Funkcja aktywacji", "p3_aktywacja.png")
 wykres(w4, "Liczba warstw", "p4_warstwy.png")
 wykres(w5, "Podzial danych", "p5_podzial.png")
-
+wykres(w6, "Liczba epok", "p6_epoki.png")
+wykres(w7, "Rozmiar batcha", "p7_batch.png")
+wykres(w8, "Momentum", "p8_momentum.png")
 
 # ================================================================
 # 5. FINALNY MODEL
@@ -391,6 +511,9 @@ for wyniki, nazwa in [
     (w3, "Funkcja aktywacji"),
     (w4, "Liczba warstw"),
     (w5, "Podzial danych"),
+    (w6, "Liczba epok"),
+    (w7, "Rozmiar batcha"),
+    (w8, "Momentum"),
 ]:
     for r in wyniki:
         rows.append(
@@ -430,11 +553,10 @@ with open(os.path.join(RESULTS, "metryki_final.json"), "w", encoding="utf-8") as
         f,
         indent=2,
     )
-print("  Zapisano: tabela_wynikow.csv, metryki_final.json")
 
 
 # ================================================================
-# 6. POROWNANIE Z KLASYCZNYMI METODAMI (gotowe biblioteki — dozwolone)
+# 6. POROWNANIE Z KLASYCZNYMI METODAMI
 # ================================================================
 print("\nPorownanie z klasycznymi metodami...")
 metody = {
