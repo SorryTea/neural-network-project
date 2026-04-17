@@ -1,1 +1,1 @@
-# chess-project
+# Airlines delays - clasification problem
