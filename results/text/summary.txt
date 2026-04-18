@@ -1,0 +1,31 @@
+Bitcoin Regression Project - Summary
+
+Best k-NN configuration:
+k: 5
+distance_metric: manhattan
+weighted: True
+TRAIN_MAPE: 0.0000
+TEST_MAPE: 28.3080
+TEST_RMSE: 19569.2128
+TEST_MAE: 12401.5657
+
+Best neural network configuration (selected by validation MAPE):
+hidden_layers: [16]
+activation: relu
+learning_rate: 0.0100
+epochs: 3000
+initialization: small_random
+batch_size: full_batch
+TRAIN_MAPE: 74.8004
+VAL_MAPE: 5.5649
+TEST_MAPE: 8.1737
+RMSE: 3850.0889
+MAE: 2593.3963
+
+Final ranking of methods by TEST MAPE:
+1. Baseline Last Value - TEST_MAPE: 3.8710, TEST_RMSE: 1878.4046, TEST_MAE: 1174.9239
+2. Baseline Moving Average - TEST_MAPE: 4.4655, TEST_RMSE: 2164.0504, TEST_MAE: 1369.7301
+3. Linear Regression - TEST_MAPE: 7.7495, TEST_RMSE: 2412.8823, TEST_MAE: 1621.9349
+4. Neural Network Best - TEST_MAPE: 8.1737, TEST_RMSE: 3850.0889, TEST_MAE: 2593.3963
+5. KNN Best - TEST_MAPE: 28.3080, TEST_RMSE: 19569.2128, TEST_MAE: 12401.5657
+6. Random Forest Best - TEST_MAPE: 29.0636, TEST_RMSE: 19110.5130, TEST_MAE: 12220.3440
